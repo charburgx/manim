@@ -16,14 +16,19 @@ import inspect
 
 import numpy as np
 
+from .. import config
 from ..constants import DEGREES, RIGHT
 from ..mobject.mobject import Mobject
+from ..mobject.opengl_mobject import OpenGLMobject
 
 
 def assert_is_mobject_method(method):
     assert inspect.ismethod(method)
     mobject = method.__self__
-    assert isinstance(mobject, Mobject)
+    if config["renderer"] == "opengl":
+        assert isinstance(mobject, OpenGLMobject)
+    else:
+        assert isinstance(mobject, Mobject)
 
 
 def always(method, *args, **kwargs):

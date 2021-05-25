@@ -26,16 +26,16 @@ class OpenGLValueTracker(OpenGLMobject):
 
     def __init__(self, value=0, **kwargs):
         OpenGLMobject.__init__(self, **kwargs)
-        self.points = np.zeros((1, 3))
+        self.data["points"] = np.zeros((1, 3))
         self.set_value(value)
 
     def get_value(self) -> float:
         """Get the current value of the ValueTracker. This value changes continuously when :attr:`animate` for the ValueTracker is called."""
-        return self.points[0, 0]
+        return self.data["points"][0, 0]
 
     def set_value(self, value: float):
         """Sets a new scalar value to the ValueTracker"""
-        self.points[0, 0] = value
+        self.data["points"][0, 0] = value
         return self
 
     def increment_value(self, d_value: float):
@@ -86,15 +86,17 @@ class OpenGLValueTracker(OpenGLMobject):
         Turns self into an interpolation between mobject1
         and mobject2.
         """
-        self.points = path_func(mobject1.points, mobject2.points, alpha)
+        self.data["points"] = path_func(
+            mobject1.data["points"], mobject2.data["points"], alpha
+        )
         return self
 
 
 class OpenGLComplexValueTracker(OpenGLValueTracker):
     def get_value(self):
-        return complex(*self.points[0, :2])
+        return complex(*self.data["points"][0, :2])
 
     def set_value(self, z):
         z = complex(z)
-        self.points[0, :2] = (z.real, z.imag)
+        self.data["points"][0, :2] = (z.real, z.imag)
         return self

@@ -199,6 +199,7 @@ def compile_tex(tex_file, tex_compiler, output_format):
                                 environment -= 1
 
                             # Print the entire environment including its end
+                            tex_lines = tex
                             while not tex_lines[environment - 1].startswith("\\end"):
                                 CONTENT += tex_lines[environment]
                                 if environment == tex_index:
