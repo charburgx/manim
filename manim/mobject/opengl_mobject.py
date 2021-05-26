@@ -25,6 +25,7 @@ from ..utils.iterables import (
 from ..utils.paths import straight_path
 from ..utils.simple_functions import get_parameters
 from ..utils.space_ops import angle_of_vector, rotation_matrix_transpose
+from .animation_builder import _AnimationBuilder
 
 
 class OpenGLMobject:
@@ -1686,7 +1687,7 @@ class OpenGLPoint(OpenGLMobject):
         self.set_points(np.array(new_loc, ndmin=2, dtype=float))
 
 
-class _AnimationBuilder:
+""" class _AnimationBuilder:
     def __init__(self, mobject):
         self.mobject = mobject
         self.overridden_animation = None
@@ -1723,7 +1724,7 @@ class _AnimationBuilder:
         if self.overridden_animation:
             return self.overridden_animation
 
-        return _MethodAnimation(self.mobject, self.methods)
+        return _MethodAnimation(self.mobject, self.methods) """
 
 
 def override_animate(method):
