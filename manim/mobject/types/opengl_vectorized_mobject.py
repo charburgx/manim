@@ -750,6 +750,35 @@ class OpenGLVMobject(OpenGLMobject):
         """
         return bezier(self.get_nth_curve_points(n))
 
+    def get_nth_curve_length_pieces(
+        self,
+        n: int,
+        sample_points: Optional[int] = None,
+    ) -> np.ndarray:
+        """Returns the array of short line lengths used for length approximation.
+
+        Parameters
+        ----------
+        n
+            The index of the desired curve.
+        sample_points
+            The number of points to sample to find the length.
+
+        Returns
+        -------
+        np.ndarray
+            The short length-pieces of the nth curve.
+        """
+        if sample_points is None:
+            sample_points = 10
+
+        curve = self.get_nth_curve_function(n)
+        points = np.array([curve(a) for a in np.linspace(0, 1, sample_points)])
+        diffs = points[1:] - points[:-1]
+        norms = np.apply_along_axis(np.linalg.norm, 1, diffs)
+
+        return norms
+
     def get_nth_curve_function_with_length(
         self,
         n: int,
@@ -1283,6 +1312,57 @@ class OpenGLVMobject(OpenGLMobject):
                     self.refresh_triangulation()
         return self
 
+    def pbp_dashed(
+        self,
+        vmobject: "OpenGLVMobject",
+        a: float,
+        b: float,
+    ) -> "OpenGLVMobject":
+        assert isinstance(vmobject, OpenGLVMobject)
+
+        # Partial curve includes three portions:
+        # - A middle section, which matches the curve exactly
+        # - A start, which is some ending portion of an inner cubic
+        # - An end, which is the starting portion of a later inner cubic
+        if a <= 0 and b >= 1:
+            self.set_points(vmobject.points)
+            return self
+        bezier_quads = [*vmobject.get_bezier_tuples()]
+        num_cubics = len(bezier_quads)
+
+        # The following two lines will compute which bezier curves of the given mobject need to be processed.
+        # The residue basically indicates de proportion of the selected bezier curve that have to be selected.
+        # Ex : if lower_index is 3, and lower_residue is 0.4, then the algorithm will append to the points 0.4 of the third bezier curve
+        lower_index, lower_residue = integer_interpolate(0, num_cubics, a)
+        upper_index, upper_residue = integer_interpolate(0, num_cubics, b)
+
+        self.clear_points()
+        if num_cubics == 0:
+            return self
+        if lower_index == upper_index:
+            self.append_points(
+                partial_quadratic_bezier_points(
+                    bezier_quads[lower_index],
+                    lower_residue,
+                    upper_residue,
+                ),
+            )
+        else:
+            self.append_points(
+                partial_quadratic_bezier_points(bezier_quads[lower_index], lower_residue, 1),
+            )
+            for quad in bezier_quads[lower_index + 1 : upper_index]:
+                self.append_points(quad)
+            self.append_points(
+                partial_quadratic_bezier_points(bezier_quads[upper_index], 0, upper_residue),
+            )
+        return self
+
+    def get_subcurve_dashed(self, a: float, b: float) -> "OpenGLVMobject":
+        vmob = self.copy()
+        vmob.pbp_dashed(self, a, b)
+        return vmob
+        
     def pointwise_become_partial(
         self,
         vmobject: "OpenGLVMobject",
@@ -1302,6 +1382,7 @@ class OpenGLVMobject(OpenGLMobject):
             lower-bound
         """
         assert isinstance(vmobject, OpenGLVMobject)
+        
         if a <= 0 and b >= 1:
             self.become(vmobject)
             return self

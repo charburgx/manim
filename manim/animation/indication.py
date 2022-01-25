@@ -605,6 +605,7 @@ class Circumscribe(Succession):
         color: Color = YELLOW,
         run_time=1,
         stroke_width=DEFAULT_STROKE_WIDTH,
+        shape_kwargs={},
         **kwargs
     ):
         if shape is Rectangle:
@@ -613,9 +614,10 @@ class Circumscribe(Succession):
                 color,
                 buff,
                 stroke_width=stroke_width,
+                **shape_kwargs,
             )
         elif shape is Circle:
-            frame = Circle(color=color, stroke_width=stroke_width).surround(
+            frame = Circle(color=color, stroke_width=stroke_width, **shape_kwargs).surround(
                 mobject,
                 buffer_factor=1,
             )

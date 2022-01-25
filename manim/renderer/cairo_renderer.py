@@ -143,7 +143,10 @@ class CairoRenderer:
 
     def render(self, scene, time, moving_mobjects):
         self.update_frame(scene, moving_mobjects)
-        self.add_frame(self.get_frame())
+        self.add_frame(self.get_frame(), surface=self.get_surface())
+
+    def get_surface(self):
+        return self.camera.get_cairo_surface()
 
     def get_frame(self):
         """
@@ -157,7 +160,7 @@ class CairoRenderer:
         """
         return np.array(self.camera.pixel_array)
 
-    def add_frame(self, frame, num_frames=1):
+    def add_frame(self, frame, surface = None, num_frames=1):
         """
         Adds a frame to the video_file_stream
 
@@ -173,7 +176,7 @@ class CairoRenderer:
             return
         self.time += num_frames * dt
         for _ in range(num_frames):
-            self.file_writer.write_frame(frame)
+            self.file_writer.write_frame(frame, surface=surface)
 
     def freeze_current_frame(self, duration: float):
         """Adds a static frame to the movie for a given duration. The static frame is the current frame.
@@ -249,10 +252,11 @@ class CairoRenderer:
             self.skip_animations = True
             raise EndSceneEarlyException()
 
-    def scene_finished(self, scene):
+    def scene_finished(self, scene, finish_file_writer=True):
         # If no animations in scene, render an image instead
         if self.num_plays:
-            self.file_writer.finish()
+            if finish_file_writer:
+                self.file_writer.finish()
         elif config.write_to_movie:
             config.save_last_frame = True
             config.write_to_movie = False
@@ -261,4 +265,4 @@ class CairoRenderer:
 
         if config["save_last_frame"]:
             self.update_frame(scene)
-            self.file_writer.save_final_image(self.camera.get_image())
+            # self.file_writer.save_final_image(self.camera.get_image())

@@ -94,11 +94,13 @@ class Scene:
         always_update_mobjects=False,
         random_seed=None,
         skip_animations=False,
+        file=None
     ):
         self.camera_class = camera_class
         self.always_update_mobjects = always_update_mobjects
         self.random_seed = random_seed
         self.skip_animations = skip_animations
+        self.file = file
 
         self.animations = None
         self.stop_condition = None

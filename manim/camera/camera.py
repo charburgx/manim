@@ -24,7 +24,7 @@ from ..mobject.types.point_cloud_mobject import PMobject
 from ..mobject.types.vectorized_mobject import VMobject
 from ..utils.color import color_to_int_rgba
 from ..utils.family import extract_mobject_family_members
-from ..utils.images import get_full_raster_image_path
+from ..utils.images import get_full_raster_image_path, premultiplied_image
 from ..utils.iterables import list_difference_update
 from ..utils.space_ops import angle_of_vector
 
@@ -146,6 +146,15 @@ class Camera:
     def background_opacity(self, alpha):
         self._background_opacity = alpha
         self.init_background()
+
+    def get_premultiplied_pixel_array(self, pixel_array = None):
+        height = self.pixel_height
+        width = self.pixel_width
+
+        if pixel_array is None:
+            pixel_array = self.pixel_array
+
+        return premultiplied_image(pixel_array.copy(), width, height)
 
     def type_or_raise(self, mobject):
         """Return the type of mobject, if it is a type that can be rendered.
@@ -273,7 +282,14 @@ class Camera:
         """
         if pixel_array is None:
             pixel_array = self.pixel_array
+
         return Image.fromarray(pixel_array, mode=self.image_mode)
+
+    def get_cairo_surface(self, pixel_array=None):
+        if pixel_array is None:
+            pixel_array = self.pixel_array
+
+        return self.get_cairo_context(pixel_array).get_target()
 
     def convert_pixel_array(self, pixel_array, convert_from_floats=False):
         """Converts a pixel array from values that have floats in then
@@ -725,6 +741,7 @@ class Camera:
         """
         self.set_cairo_context_color(ctx, self.get_fill_rgbas(vmobject), vmobject)
         ctx.fill_preserve()
+
         return self
 
     def apply_stroke(self, ctx, vmobject, background=False):

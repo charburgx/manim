@@ -73,10 +73,11 @@ class GrowFromPoint(Transform):
     """
 
     def __init__(
-        self, mobject: "Mobject", point: np.ndarray, point_color: str = None, **kwargs
+        self, mobject: "Mobject", point: np.ndarray, point_color: str = None, stretch_dim=None, **kwargs
     ) -> None:
         self.point = point
         self.point_color = point_color
+        self.stretch_dim = stretch_dim
         super().__init__(mobject, **kwargs)
 
     def create_target(self) -> "Mobject":
@@ -84,7 +85,13 @@ class GrowFromPoint(Transform):
 
     def create_starting_mobject(self) -> "Mobject":
         start = super().create_starting_mobject()
-        start.scale(0)
+
+        if self.stretch_dim:
+            start.stretch(0, self.stretch_dim)
+        else:
+            start.scale(0)
+
+        
         start.move_to(self.point)
         if self.point_color:
             start.set_color(self.point_color)

@@ -54,6 +54,7 @@ class _Fade(Transform):
         shift: Optional[np.ndarray] = None,
         target_position: Optional[Union[np.ndarray, Mobject]] = None,
         scale: float = 1,
+        angle: float = 0,
         **kwargs
     ) -> None:
         if not mobjects:
@@ -62,6 +63,8 @@ class _Fade(Transform):
             mobject = mobjects[0]
         else:
             mobject = Group(*mobjects)
+
+        self.angle = angle
 
         self.point_target = False
         if shift is None:

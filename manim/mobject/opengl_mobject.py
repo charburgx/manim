@@ -136,6 +136,8 @@ class OpenGLMobject:
 
         self.should_render = should_render
 
+        self.z_index = kwargs.pop("z_index", 0)
+
     @classmethod
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -271,6 +273,44 @@ class OpenGLMobject:
         for key in uniforms:
             self.uniforms[key] = uniforms[key]  # Copy?
         return self
+
+    def get_critical_point(self, direction):
+        """Picture a box bounding the :class:`~.Mobject`.  Such a box has
+        9 'critical points': 4 corners, 4 edge center, the
+        center. This returns one of them, along the given direction.
+
+        ::
+
+            sample = Arc(start_angle=PI/7, angle = PI/5)
+
+            # These are all equivalent
+            max_y_1 = sample.get_top()[1]
+            max_y_2 = sample.get_critical_point(UP)[1]
+            max_y_3 = sample.get_extremum_along_dim(dim=1, key=1)
+
+        """
+        result = np.zeros(self.dim)
+        all_points = self.get_all_points()
+        if len(all_points) == 0:
+            return result
+        for dim in range(self.dim):
+            result[dim] = self.get_extremum_along_dim(
+                all_points,
+                dim=dim,
+                key=direction[dim],
+            )
+        return result
+
+    def get_extremum_along_dim(self, points=None, dim=0, key=0):
+        if points is None:
+            points = self.get_all_points()
+        values = points[:, dim]
+        if key < 0:
+            return np.min(values)
+        elif key == 0:
+            return (np.min(values) + np.max(values)) / 2
+        else:
+            return np.max(values)
 
     @property
     def animate(self):
@@ -1590,11 +1630,7 @@ class OpenGLMobject:
         self.shift(-self.get_center())
         return self
 
-    def align_on_border(self, direction, buff=DEFAULT_MOBJECT_TO_EDGE_BUFFER):
-        """
-        Direction just needs to be a vector pointing towards side or
-        corner in the 2d plane.
-        """
+    def align_on_border_vec(self, direction, buff=DEFAULT_MOBJECT_TO_EDGE_BUFFER):
         target_point = np.sign(direction) * (
             config["frame_x_radius"],
             config["frame_y_radius"],
@@ -1603,6 +1639,15 @@ class OpenGLMobject:
         point_to_align = self.get_bounding_box_point(direction)
         shift_val = target_point - point_to_align - buff * np.array(direction)
         shift_val = shift_val * abs(np.sign(direction))
+
+        return shift_val
+
+    def align_on_border(self, direction, buff=DEFAULT_MOBJECT_TO_EDGE_BUFFER):
+        """
+        Direction just needs to be a vector pointing towards side or
+        corner in the 2d plane.
+        """
+        shift_val = self.align_on_border_vec(direction, buff)
         self.shift(shift_val)
         return self
 
@@ -2158,6 +2203,17 @@ class OpenGLMobject:
         # TODO, better place to define default z_index_group?
         z_index_group = getattr(self, "z_index_group", self)
         return z_index_group.get_center()
+
+    def set_z_index(
+        self,
+        z_index_value: float,
+        family: bool = True,
+    ) -> "OpenGLMobject":
+        if family:
+            for submob in self.submobjects:
+                submob.set_z_index(z_index_value, family=family)
+        self.z_index = z_index_value
+        return self
 
     # Match other mobject properties
 

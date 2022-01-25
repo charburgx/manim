@@ -138,6 +138,7 @@ class NumberLine(Line):
         include_tip: bool = False,
         tip_width: float = 0.25,
         tip_height: float = 0.25,
+        # tip_config = {},
         # numbers/labels
         include_numbers: bool = False,
         font_size: float = 36,
@@ -188,6 +189,7 @@ class NumberLine(Line):
         self.include_tip = include_tip
         self.tip_width = tip_width
         self.tip_height = tip_height
+        # self.tip_config = tip_config
         # numbers
         self.font_size = font_size
         self.include_numbers = include_numbers

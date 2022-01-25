@@ -65,10 +65,11 @@ class SceneFileWriter:
 
     force_output_as_scene_name = False
 
-    def __init__(self, renderer, scene_name, **kwargs):
+    def __init__(self, renderer, scene_name, do_init_output_dirs=True, **kwargs):
         self.renderer = renderer
         self.stream_lock = False
-        self.init_output_directories(scene_name)
+        if do_init_output_dirs:
+            self.init_output_directories(scene_name)
         self.init_audio()
         self.frame_count = 0
         self.partial_movie_files: List[str] = []
@@ -343,7 +344,7 @@ class SceneFileWriter:
         if write_to_movie() and allow_write:
             self.close_movie_pipe()
 
-    def write_frame(self, frame_or_renderer):
+    def write_frame(self, frame_or_renderer, surface = None):
         """
         Used internally by Manim to write a frame to
         the FFMPEG input buffer.
@@ -360,7 +361,7 @@ class SceneFileWriter:
             if write_to_movie():
                 self.writing_process.stdin.write(frame.tobytes())
             if is_png_format() and not config["dry_run"]:
-                self.output_image_from_array(frame)
+                self.output_image_from_array(frame, surface = surface)
 
     def write_opengl_frame(self, renderer):
         if write_to_movie():
@@ -376,23 +377,32 @@ class SceneFileWriter:
                 config["zero_pad"],
             )
 
-    def output_image_from_array(self, frame_data):
+    def output_image_from_array(self, frame_data, surface = None):
         target_dir, extension = os.path.splitext(self.image_file_path)
         self.output_image(
             Image.fromarray(frame_data),
             target_dir,
             extension,
             config["zero_pad"],
+            surface=surface
         )
 
-    def output_image(self, image: Image.Image, target_dir, ext, zero_pad: bool):
+    def output_image(self, image: Image.Image, target_dir, ext, zero_pad: bool, surface = None):
+        filename = f"{target_dir}{self.frame_count}{ext}"
+
         if zero_pad:
-            image.save(f"{target_dir}{str(self.frame_count).zfill(zero_pad)}{ext}")
+            filename = f"{target_dir}{str(self.frame_count).zfill(zero_pad)}{ext}"
         else:
-            image.save(f"{target_dir}{self.frame_count}{ext}")
+            filename = f"{target_dir}{self.frame_count}{ext}"
+
+        if surface is None:
+            image.save(filename)
+        else:
+            surface.write_to_png(filename)
+
         self.frame_count += 1
 
-    def save_final_image(self, image):
+    def save_final_image(self, image, surface = False, add_version=True):
         """
         The name is a misnomer. This method saves the image
         passed to it as an in the default image directory.
@@ -404,10 +414,14 @@ class SceneFileWriter:
         """
         if config["dry_run"]:
             return
-        if not config["output_file"]:
+        if not config["output_file"] and add_version:
             self.image_file_path = add_version_before_extension(self.image_file_path)
 
-        image.save(self.image_file_path)
+        if not surface:
+            image.save(self.image_file_path)
+        else:
+            image.write_to_png(self.image_file_path)
+
         self.print_file_ready_message(self.image_file_path)
 
     def idle_stream(self):

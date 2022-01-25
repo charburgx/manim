@@ -222,6 +222,25 @@ class CoordinateSystem:
     def get_axis(self, index):
         return self.get_axes()[index]
 
+    # def get_graph(self, function, x_range=None, **kwargs):
+    #     t_range = np.array(self.x_range, dtype=float)
+    #     if x_range is not None:
+    #         t_range[:len(x_range)] = x_range
+    #     # For axes, the third coordinate of x_range indicates
+    #     # tick frequency.  But for functions, it indicates a
+    #     # sample frequency
+    #     if x_range is None or len(x_range) < 3:
+    #         t_range[2] /= self.num_sampled_graph_points_per_tick
+
+    #     graph = ParametricFunction(
+    #         lambda t: self.c2p(t, function(t)),
+    #         t_range=t_range,
+    #         **kwargs
+    #     )
+    #     graph.underlying_function = function
+    #     graph.x_range = x_range
+    #     return graph
+
     def get_origin(self) -> np.ndarray:
         """Gets the origin of :class:`~.Axes`.
 
@@ -423,7 +442,7 @@ class CoordinateSystem:
         self,
         *axes_numbers: Union[
             Optional[Iterable[float]],
-            Union[Dict[float, Union[str, float, "Mobject"]]],
+            Dict[float, Union[str, float, "Mobject"]],
         ],
         **kwargs,
     ):
@@ -1826,6 +1845,9 @@ class Axes(VGroup, CoordinateSystem, metaclass=ConvertToOpenGL):
 
         self.shift(-self.coords_to_point(*lines_center_point))
 
+    def get_length(self, length):
+        return np.linalg.norm(self.c2p(0, 0, 0) - self.c2p(length, 0, 0))
+
     @staticmethod
     def _update_default_configs(default_configs, passed_configs):
         for default_config, passed_config in zip(default_configs, passed_configs):
@@ -2307,8 +2329,10 @@ class NumberPlane(Axes):
         faded_line_style: Optional[dict] = None,
         faded_line_ratio: int = 1,
         make_smooth_after_applying_functions: bool = True,
+        line_func=Line,
         **kwargs,
     ):
+        self.line_func = line_func
 
         # configs
         self.axis_config = {
@@ -2443,7 +2467,7 @@ class NumberPlane(Axes):
              (i.e the faded lines parallel to `axis_parallel_to`) sets of lines, respectively.
         """
 
-        line = Line(axis_parallel_to.get_start(), axis_parallel_to.get_end())
+        line = self.line_func(axis_parallel_to.get_start(), axis_parallel_to.get_end())
         if ratio_faded_lines == 0:  # don't show faded lines
             ratio_faded_lines = 1  # i.e. set ratio to 1
         step = (1 / ratio_faded_lines) * freq

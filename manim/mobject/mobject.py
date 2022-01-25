@@ -1333,10 +1333,7 @@ class Mobject:
         self.shift(-self.get_center())
         return self
 
-    def align_on_border(self, direction, buff=DEFAULT_MOBJECT_TO_EDGE_BUFFER):
-        """Direction just needs to be a vector pointing towards side or
-        corner in the 2d plane.
-        """
+    def align_on_border_vec(self, direction, buff=DEFAULT_MOBJECT_TO_EDGE_BUFFER):
         target_point = np.sign(direction) * (
             config["frame_x_radius"],
             config["frame_y_radius"],
@@ -1345,6 +1342,14 @@ class Mobject:
         point_to_align = self.get_critical_point(direction)
         shift_val = target_point - point_to_align - buff * np.array(direction)
         shift_val = shift_val * abs(np.sign(direction))
+
+        return shift_val
+
+    def align_on_border(self, direction, buff=DEFAULT_MOBJECT_TO_EDGE_BUFFER):
+        """Direction just needs to be a vector pointing towards side or
+        corner in the 2d plane.
+        """
+        shift_val = self.align_on_border_vec(direction, buff)
         self.shift(shift_val)
         return self
 
@@ -2684,7 +2689,7 @@ class Mobject:
         self,
         z_index_value: float,
         family: bool = True,
-    ) -> "VMobject":
+    ) -> "Mobject":
         """Sets the :class:`~.Mobject`'s :attr:`z_index` to the value specified in `z_index_value`.
 
         Parameters

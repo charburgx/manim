@@ -148,6 +148,9 @@ class OpenGLCamera(OpenGLMobject):
         self.set_euler_angles(theta, phi, gamma)
         return self
 
+    def get_theta(self):
+        return self.euler_angles[0]
+
     def set_euler_angles(self, theta=None, phi=None, gamma=None):
         if theta is not None:
             self.euler_angles[0] = theta

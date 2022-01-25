@@ -2338,89 +2338,108 @@ class DashedVMobject(VMobject, metaclass=ConvertToOpenGL):
         super().__init__(color=color, **kwargs)
         r = self.dashed_ratio
         n = self.num_dashes
+
+
+
         if n > 0:
-            # Assuming total length is 1
-            dash_len = r / n
-            if vmobject.is_closed():
-                void_len = (1 - r) / n
-            else:
-                if n == 1:
-                    void_len = 1 - r
-                else:
-                    void_len = (1 - r) / (n - 1)
+            # End points of the unit interval for division
+            alphas = np.linspace(0, 1, n + 1)
 
-            period = dash_len + void_len
-            phase_shift = (dash_offset % 1) * period
+            # This determines the length of each "dash"
+            full_d_alpha = (1.0 / n)
+            partial_d_alpha = full_d_alpha * (1 - r)
 
-            if vmobject.is_closed():
-                # closed curves have equal amount of dashes and voids
-                pattern_len = 1
-            else:
-                # open curves start and end with a dash, so the whole dash pattern with the last void is longer
-                pattern_len = 1 + void_len
+            fac = partial_d_alpha / 2
 
-            dash_starts = [((i * period + phase_shift) % pattern_len) for i in range(n)]
-            dash_ends = [
-                ((i * period + dash_len + phase_shift) % pattern_len) for i in range(n)
-            ]
+            for i in range(len(alphas) - 1):
+                a1 = alphas[i]
+                a2 = alphas[i+1]
 
-            # closed shapes can handle overflow at the 0-point
-            # open shapes need special treatment for it
-            if not vmobject.is_closed():
-                # due to phase shift being [0...1] range, always the last dash element needs attention for overflow
-                # if an entire dash moves out of the shape end:
-                if dash_ends[-1] > 1 and dash_starts[-1] > 1:
-                    # remove the last element since it is out-of-bounds
-                    dash_ends.pop()
-                    dash_starts.pop()
-                elif dash_ends[-1] < dash_len:  # if it overflowed
-                    if (
-                        dash_starts[-1] < 1
-                    ):  # if the beginning of the piece is still in range
-                        dash_starts.append(0)
-                        dash_ends.append(dash_ends[-1])
-                        dash_ends[-2] = 1
-                    else:
-                        dash_starts[-1] = 0
-                elif dash_starts[-1] > (1 - dash_len):
-                    dash_ends[-1] = 1
+                self.add(vmobject.get_subcurve(a1 + fac, a2 - fac) if config.renderer != "opengl" else vmobject.get_subcurve_dashed(a1 + fac, a2 - fac))
 
-            if equal_lengths:
-                # calculate the entire length by adding up short line-pieces
-                norms = np.array(0)
-                for k in range(vmobject.get_num_curves()):
-                    norms = np.append(norms, vmobject.get_nth_curve_length_pieces(k))
-                # add up length-pieces in array form
-                length_vals = np.cumsum(norms)
-                ref_points = np.linspace(0, 1, length_vals.size)
-                curve_length = length_vals[-1]
-                self.add(
-                    *(
-                        vmobject.get_subcurve(
-                            np.interp(
-                                dash_starts[i] * curve_length,
-                                length_vals,
-                                ref_points,
-                            ),
-                            np.interp(
-                                dash_ends[i] * curve_length,
-                                length_vals,
-                                ref_points,
-                            ),
-                        )
-                        for i in range(len(dash_starts))
-                    )
-                )
-            else:
-                self.add(
-                    *(
-                        vmobject.get_subcurve(
-                            dash_starts[i],
-                            dash_ends[i],
-                        )
-                        for i in range(len(dash_starts))
-                    )
-                )
+        # if n > 0:
+        #     # Assuming total length is 1
+        #     dash_len = r / n
+        #     if vmobject.is_closed():
+        #         void_len = (1 - r) / n
+        #     else:
+        #         if n == 1:
+        #             void_len = 1 - r
+        #         else:
+        #             void_len = (1 - r) / (n - 1)
+
+        #     period = dash_len + void_len
+        #     phase_shift = (dash_offset % 1) * period
+
+        #     if vmobject.is_closed():
+        #         # closed curves have equal amount of dashes and voids
+        #         pattern_len = 1
+        #     else:
+        #         # open curves start and end with a dash, so the whole dash pattern with the last void is longer
+        #         pattern_len = 1 + void_len
+
+        #     dash_starts = [((i * period + phase_shift) % pattern_len) for i in range(n)]
+        #     dash_ends = [
+        #         ((i * period + dash_len + phase_shift) % pattern_len) for i in range(n)
+        #     ]
+
+        #     # closed shapes can handle overflow at the 0-point
+        #     # open shapes need special treatment for it
+        #     if not vmobject.is_closed():
+        #         # due to phase shift being [0...1] range, always the last dash element needs attention for overflow
+        #         # if an entire dash moves out of the shape end:
+        #         if dash_ends[-1] > 1 and dash_starts[-1] > 1:
+        #             # remove the last element since it is out-of-bounds
+        #             dash_ends.pop()
+        #             dash_starts.pop()
+        #         elif dash_ends[-1] < dash_len:  # if it overflowed
+        #             if (
+        #                 dash_starts[-1] < 1
+        #             ):  # if the beginning of the piece is still in range
+        #                 dash_starts.append(0)
+        #                 dash_ends.append(dash_ends[-1])
+        #                 dash_ends[-2] = 1
+        #             else:
+        #                 dash_starts[-1] = 0
+        #         elif dash_starts[-1] > (1 - dash_len):
+        #             dash_ends[-1] = 1
+
+        #     if equal_lengths:
+        #         # calculate the entire length by adding up short line-pieces
+        #         norms = np.array(0)
+        #         for k in range(vmobject.get_num_curves()):
+        #             norms = np.append(norms, vmobject.get_nth_curve_length_pieces(k))
+        #         # add up length-pieces in array form
+        #         length_vals = np.cumsum(norms)
+        #         ref_points = np.linspace(0, 1, length_vals.size)
+        #         curve_length = length_vals[-1]
+        #         self.add(
+        #             *(
+        #                 vmobject.get_subcurve(
+        #                     np.interp(
+        #                         dash_starts[i] * curve_length,
+        #                         length_vals,
+        #                         ref_points,
+        #                     ),
+        #                     np.interp(
+        #                         dash_ends[i] * curve_length,
+        #                         length_vals,
+        #                         ref_points,
+        #                     ),
+        #                 )
+        #                 for i in range(len(dash_starts))
+        #             )
+        #         )
+        #     else:
+        #         self.add(
+        #             *(
+        #                 vmobject.get_subcurve(
+        #                     dash_starts[i],
+        #                     dash_ends[i],
+        #                 )
+        #                 for i in range(len(dash_starts))
+        #             )
+        #         )
         # Family is already taken care of by get_subcurve
         # implementation
         if config.renderer == "opengl":
